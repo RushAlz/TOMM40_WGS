@@ -1,0 +1,6 @@
+channels:
+    - conda-forge
+    - bioconda
+dependencies:
+    - gangstr 
+    - gsl=2.7=he838d99_0

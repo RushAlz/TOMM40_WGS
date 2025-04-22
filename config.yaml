@@ -1,0 +1,14 @@
+# Choose one of the following inputs
+
+# 1. Use this for automatic file discovery via glob
+input_glob: "input/R1708627_00246264.h38.cram"
+
+# 2. Or provide a table of samples and their input files (columns mush be sample_id, path)
+input_table: ""  # e.g., "samples.tsv"
+
+# Output folder
+output_dir: "results"
+
+# Reference genome and build
+genome_build: "GRCh38"
+ref_fasta: "resources/GRCh38.fa"
