@@ -15,7 +15,17 @@ The repeat length is typically categorized into three classes:
 
 ## 🚀 Quick Start
 
-### Install with bioconda
+### Clone the repository and install dependencies
+```bash
+git clone https://github.com/RushAlz/TOMM40_WGS.git
+cd TOMM40_WGS
+chmod u+x TOMM40_WGS
+
+# Pre-install dependencies (make sure to have snakemake and conda installed first)
+./TOMM40_WGS --conda-create-envs-only
+```
+
+### (soon) Alternatively: Install with bioconda 
 ```bash
 conda install -c bioconda tomm40_wgs
 ```
@@ -179,4 +189,4 @@ Important licensing information is available [here](docs/license_instructions.md
 ## Citation
 If you use this pipeline, please cite:
 
-> Vialle RA et al. (2025). *Genotyping TOMM40'523 Poly-T Polymorphisms Using Whole-Genome Sequencing*. [Computer software]. https://github.com/RushAlz/TOMM40_WGS
+> Vialle RA et al. (2025). *Genotyping TOMM40'523 Poly-T Polymorphisms Using Whole-Genome Sequencing*. [medRxiv 2025.04.23.25326276; doi: https://doi.org/10.1101/2025.04.23.25326276](https://doi.org/10.1101/2025.04.23.25326276)
