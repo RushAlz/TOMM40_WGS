@@ -5,13 +5,16 @@
 display_help() {
   echo "TOMM40_WGS: Genotyping TOMM40'523 Poly-T Polymorphisms Using Whole-Genome Sequencing"
   echo ""
-  echo "Usage: $0 [--input_wgs BAM/CRAM] [--input_table TSV] [--configfile YAML FILE] [other Snakemake options]"
+  # Dynamically determine the script name for usage message
+  local script_name
+  script_name=$(basename "$0")
+  echo "Usage: $script_name [--input_wgs BAM/CRAM] [--input_table TSV] [--configfile YAML FILE] [other Snakemake options]"
   echo ""
   echo "Parameters:"
   echo "   --input_wgs               Input BAM/CRAM file(s). Can be a single file, glob pattern (\"*.cram\"), or space-separated list."
   echo "   --input_table             TSV file with columns 'sample_id' and 'path' listing input files."
-  echo "   --configfile              YAML configuration file (default: config.yaml in script directory)."
-  echo "   --ref_fasta               Reference genome FASTA file (default: resources/GRCh38.fa)."
+  echo "   --configfile              YAML configuration file (default: config.yaml in script/data directory)."
+  echo "   --ref_fasta               Reference genome FASTA file (default: resources/GRCh38.fa in script/data directory)."
   echo "   --genome_build            Genome build (default: GRCh38)."
   echo "   --output_dir              Output directory (default: results)."
   echo "   --cores                   Number of cores to use (default: 1)."
@@ -24,13 +27,13 @@ display_help() {
   echo ""
   echo "Examples:"
   echo "   # Run with a single input file"
-  echo "   $0 --input_wgs sample.bam"
+  echo "   $script_name --input_wgs sample.bam"
   echo ""
   echo "   # Run with multiple files using glob pattern (must be quoted)"
-  echo "   $0 --input_wgs \"*.cram\""
+  echo "   $script_name --input_wgs \"*.cram\""
   echo ""
   echo "   # Run with a sample table"
-  echo "   $0 --input_table samples.tsv"
+  echo "   $script_name --input_table samples.tsv"
   echo ""
   echo "More info at https://github.com/RushAlz/TOMM40_WGS"
   echo ""
@@ -53,98 +56,90 @@ if ! command -v snakemake &> /dev/null; then
   error_exit "Snakemake could not be found. Please install it first."
 fi
 
-# Get script directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# --- Determine Data Directory --- #
+# This logic handles standalone, pip (via wrapper), and conda installations.
 
-# Default values
+# 1. Check for environment variable set by pip wrapper
+if [[ -n "$TOMM40_DATA_DIR" && -d "$TOMM40_DATA_DIR" ]]; then
+  DATA_DIR="$TOMM40_DATA_DIR"
+else
+  # 2. Fallback: Determine directory containing this script
+  # This works for standalone execution and conda installation.
+  SCRIPT_DIR_FALLBACK="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
+  # Check if the fallback directory looks like a valid installation/source directory
+  if [[ -f "$SCRIPT_DIR_FALLBACK/Snakefile" ]]; then
+    DATA_DIR="$SCRIPT_DIR_FALLBACK"
+  else
+    # 3. Final fallback: Assume current directory (less reliable)
+    DATA_DIR="."
+    warning "Could not reliably determine the data directory. Assuming current directory (".")."
+    warning "Ensure Snakefile, config.yaml, etc., are present here or specify --configfile."
+  fi
+fi
+
+# --- Default Paths based on DATA_DIR --- #
+CONFIGFILE_DEFAULT="$DATA_DIR/config.yaml"
+REF_FASTA_DEFAULT="$DATA_DIR/resources/GRCh38.fa"
+SNAKEFILE_DEFAULT="$DATA_DIR/Snakefile"
+
+# --- Initialize Variables with Defaults or Command-Line Overrides --- #
 INPUT_WGS=""
 INPUT_TABLE=""
-CONFIGFILE="$SCRIPT_DIR/config.yaml"
-REF_FASTA="resources/GRCh38.fa"
+CONFIGFILE="$CONFIGFILE_DEFAULT" # Will be potentially overridden by --configfile arg
+REF_FASTA="$REF_FASTA_DEFAULT"   # Will be potentially overridden by --ref_fasta arg
 GENOME_BUILD="GRCh38"
 OUTPUT_DIR="results"
 CORES="1"
-SNAKEFILE="$SCRIPT_DIR/Snakefile"
+SNAKEFILE="$SNAKEFILE_DEFAULT" # Use the determined default path
 EXTRA_PARAMS=""
 
-# Parse command line arguments
+# --- Parse Command Line Arguments --- #
+# (Keep the argument parsing loop as it was, it correctly overrides the variables)
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --input_wgs)
-      if [[ -z "$2" || "$2" == --* ]]; then
-        error_exit "Missing value for parameter: $1"
-      fi
-      INPUT_WGS="$2"
-      shift 2
-      ;;
+      if [[ -z "$2" || "$2" == --* ]]; then error_exit "Missing value for parameter: $1"; fi
+      INPUT_WGS="$2"; shift 2 ;;
     --input_table)
-      if [[ -z "$2" || "$2" == --* ]]; then
-        error_exit "Missing value for parameter: $1"
-      fi
-      INPUT_TABLE="$2"
-      shift 2
-      ;;
+      if [[ -z "$2" || "$2" == --* ]]; then error_exit "Missing value for parameter: $1"; fi
+      INPUT_TABLE="$2"; shift 2 ;;
     --configfile)
-      if [[ -z "$2" || "$2" == --* ]]; then
-        error_exit "Missing value for parameter: $1"
-      fi
-      CONFIGFILE="$2"
-      shift 2
-      ;;
+      if [[ -z "$2" || "$2" == --* ]]; then error_exit "Missing value for parameter: $1"; fi
+      CONFIGFILE="$2"; shift 2 ;;
     --ref_fasta)
-      if [[ -z "$2" || "$2" == --* ]]; then
-        error_exit "Missing value for parameter: $1"
-      fi
-      REF_FASTA="$2"
-      shift 2
-      ;;
+      if [[ -z "$2" || "$2" == --* ]]; then error_exit "Missing value for parameter: $1"; fi
+      REF_FASTA="$2"; shift 2 ;;
     --genome_build)
-      if [[ -z "$2" || "$2" == --* ]]; then
-        error_exit "Missing value for parameter: $1"
-      fi
-      GENOME_BUILD="$2"
-      shift 2
-      ;;
+      if [[ -z "$2" || "$2" == --* ]]; then error_exit "Missing value for parameter: $1"; fi
+      GENOME_BUILD="$2"; shift 2 ;;
     --output_dir)
-      if [[ -z "$2" || "$2" == --* ]]; then
-        error_exit "Missing value for parameter: $1"
-      fi
-      OUTPUT_DIR="$2"
-      shift 2
-      ;;
+      if [[ -z "$2" || "$2" == --* ]]; then error_exit "Missing value for parameter: $1"; fi
+      OUTPUT_DIR="$2"; shift 2 ;;
     --cores)
-      if [[ -z "$2" || "$2" == --* ]]; then
-        error_exit "Missing value for parameter: $1"
-      fi
-      if ! [[ "$2" =~ ^[0-9]+$ ]]; then
-        error_exit "Cores must be a positive integer: $2"
-      fi
-      CORES="$2"
-      shift 2
-      ;;
+      if [[ -z "$2" || "$2" == --* ]]; then error_exit "Missing value for parameter: $1"; fi
+      if ! [[ "$2" =~ ^[0-9]+$ ]]; then error_exit "Cores must be a positive integer: $2"; fi
+      CORES="$2"; shift 2 ;;
     --help|-h)
-      display_help
-      ;;
+      display_help ;;
     *)
-      EXTRA_PARAMS="$EXTRA_PARAMS $1"
-      shift
-      ;;
+      EXTRA_PARAMS="$EXTRA_PARAMS $1"; shift ;;
   esac
 done
 
-# Validate inputs
+# --- Validate Inputs --- #
+# Check if Snakefile exists using the final SNAKEFILE path
+if [[ ! -f "$SNAKEFILE" ]]; then
+  error_exit "Snakefile not found. Determined path: $SNAKEFILE"
+fi
+
+# Check if essential inputs are missing (only if default config doesn't exist)
 if [[ -z "$INPUT_WGS" && -z "$INPUT_TABLE" && ! -f "$CONFIGFILE" ]]; then
-  error_exit "Either --input_wgs, --input_table, or a valid --configfile must be provided."
+  error_exit "Input required: Use --input_wgs, --input_table, or ensure config file exists at $CONFIGFILE"
 fi
 
 # Check if both input methods are specified
 if [[ -n "$INPUT_WGS" && -n "$INPUT_TABLE" ]]; then
   warning "Both --input_wgs and --input_table are specified. --input_table will take precedence."
-fi
-
-# Check if Snakefile exists
-if [[ ! -f "$SNAKEFILE" ]]; then
-  error_exit "Snakefile not found at: $SNAKEFILE"
 fi
 
 # Check if input_table exists when specified
@@ -154,23 +149,26 @@ fi
 
 # Validate input_table format if specified
 if [[ -n "$INPUT_TABLE" && -f "$INPUT_TABLE" ]]; then
-  # Check if the file has the required columns
   if ! head -1 "$INPUT_TABLE" | grep -q "sample_id" || ! head -1 "$INPUT_TABLE" | grep -q "path"; then
     error_exit "Input table must have 'sample_id' and 'path' columns."
   fi
 fi
 
-# Build snakemake command
-SNAKEMAKE_CMD="snakemake -s $SNAKEFILE"
+# --- Build Snakemake Command --- #
+SNAKEMAKE_CMD="snakemake -s \"$SNAKEFILE\""
 
-# Add configfile if it exists
+# Add configfile if it exists (using the final CONFIGFILE variable)
 if [[ -f "$CONFIGFILE" ]]; then
-  SNAKEMAKE_CMD="$SNAKEMAKE_CMD --configfile $CONFIGFILE"
-else
-  echo "Warning: Config file not found at $CONFIGFILE. Using command line parameters only."
+  SNAKEMAKE_CMD="$SNAKEMAKE_CMD --configfile \"$CONFIGFILE\""
+elif [[ "$CONFIGFILE" != "$CONFIGFILE_DEFAULT" ]]; then
+  # Warn if a specific config file was requested but not found
+  warning "Specified config file not found at '$CONFIGFILE'."
+elif [[ ! -f "$CONFIGFILE_DEFAULT" ]]; then
+  # Warn if the default config file wasn't found either
+  warning "Default config file not found at '$CONFIGFILE_DEFAULT'. Using command line parameters only."
 fi
 
-# Add config parameters
+# Add config parameters passed via command line
 CONFIG_PARAMS=""
 
 # Handle input_table (takes precedence over input_wgs)
@@ -178,28 +176,21 @@ if [[ -n "$INPUT_TABLE" ]]; then
   CONFIG_PARAMS="$CONFIG_PARAMS input_table=\"$INPUT_TABLE\""
 # Handle input_wgs (properly escape glob patterns)
 elif [[ -n "$INPUT_WGS" ]]; then
-  # Check if the input contains wildcards that need to be preserved
   if [[ "$INPUT_WGS" == *\** || "$INPUT_WGS" == *\?* ]]; then
-    # Double quote the pattern to prevent shell expansion
     CONFIG_PARAMS="$CONFIG_PARAMS input_glob=\"$INPUT_WGS\""
   else
-    # Check if the specified file(s) exist
-    if [[ ! -f "$INPUT_WGS" ]]; then
-      # If it's not a file, it might be a pattern that should be passed as-is
-      warning "Input file not found: $INPUT_WGS. Treating as a pattern."
-    fi
+    # Pass as-is, let Snakemake handle existence check if needed
     CONFIG_PARAMS="$CONFIG_PARAMS input_glob=\"$INPUT_WGS\""
   fi
 fi
 
-if [[ -n "$REF_FASTA" ]]; then
+# Add other config overrides from command line
+if [[ "$REF_FASTA" != "$REF_FASTA_DEFAULT" || -n "$REF_FASTA" ]]; then
   CONFIG_PARAMS="$CONFIG_PARAMS ref_fasta=\"$REF_FASTA\""
 fi
-
 if [[ -n "$GENOME_BUILD" ]]; then
   CONFIG_PARAMS="$CONFIG_PARAMS genome_build=\"$GENOME_BUILD\""
 fi
-
 if [[ -n "$OUTPUT_DIR" ]]; then
   CONFIG_PARAMS="$CONFIG_PARAMS output_dir=\"$OUTPUT_DIR\""
 fi
@@ -217,7 +208,8 @@ if [[ -n "$EXTRA_PARAMS" ]]; then
   SNAKEMAKE_CMD="$SNAKEMAKE_CMD $EXTRA_PARAMS"
 fi
 
-# Print the command (for debugging)
+# --- Execute Snakemake --- #
+echo "Determined DATA_DIR: $DATA_DIR"
 echo "Executing: $SNAKEMAKE_CMD"
 
 # Create output directory if it doesn't exist
@@ -233,3 +225,5 @@ if [[ $EXIT_CODE -ne 0 ]]; then
 fi
 
 echo "TOMM40_WGS pipeline completed successfully."
+
+
