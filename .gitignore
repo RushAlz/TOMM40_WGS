@@ -1,3 +1,5 @@
 .snakemake
 results
-bioconda-recipes
+bioconda-recipes/
+dist/
+tomm40_wgs.egg-info
