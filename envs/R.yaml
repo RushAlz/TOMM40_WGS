@@ -1,0 +1,17 @@
+channels:
+    - conda-forge
+dependencies:
+    - r-vcfr
+    - r-optparse
+    - r-mlr
+    - r-dplyr
+    - r-tidyr
+    - r-purrr
+    - r-reshape2
+    - r-data.table
+    - r-readr
+    - r-stringr
+    - r-tibble
+    - r-parsnip
+    - r-tidymodels
+    - r-xgboost =1.7.6

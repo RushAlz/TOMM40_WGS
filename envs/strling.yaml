@@ -1,11 +1,9 @@
 channels:
     - conda-forge
     - bioconda
+    - anaconda
 dependencies:
-    - trtools 
-    - bcftools 
-    - art 
     - strling
-    - jellyfish
     - htslib
+    - samtools
 

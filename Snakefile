@@ -4,6 +4,11 @@ import pandas as pd
 
 # Globals
 SNAKEDIR = os.path.dirname(workflow.snakefile) + "/"
+# if "output_dir" is not set =  $PWD/results
+if not config.get("output_dir"):
+    config["output_dir"] = os.getcwd() + "/results"
+
+
 LOGDIR = config["output_dir"] + "/logs"
 os.makedirs(LOGDIR, exist_ok=True)
 
@@ -16,7 +21,10 @@ def load_samples():
         files = sorted(glob.glob(config["input_glob"]))
         return {os.path.basename(f).split(".")[0]: f for f in files}
     else: # Error message
-        return {print("No input files found. Please provide either input_glob or input_table in the config file.")} 
+        # Instead of returning a set with a print function call:
+        print("No input files found. Please provide either input_glob or input_table in the config file.")
+        # Return an empty dictionary instead:
+        return {}
 
 sample_dict = load_samples()
 sample_ids = list(sample_dict.keys())
@@ -92,30 +100,44 @@ rule hipstr:
             --output-filters \
             --max-flank-indel 0.9  &> {log}
         """
-
-rule jellyfish_kmer:
+        
+rule strling:
     output:
-        kmer_count="results/jellyfish/{sample}/{sample}.polyT_kmer.txt",
         strling_cram="results/jellyfish/{sample}/jf/{sample}.strling.cram",
         string_fa="results/jellyfish/{sample}/jf/{sample}.strling.fa"
     input:
         cram="results/{sample}/{sample}." + genome_build + ".TOMM40.cram",
         ref_fasta=config["ref_fasta"]
     log:
-        "results/logs/jellyfish_kmer_{sample}.log"
+        "results/logs/strling_{sample}.log"
     params:
         region_mapping=region_mapping[genome_build]
-    threads: 8
     conda:
-        "envs/kmer_tools.yaml"
+        "envs/strling.yaml"
     shell:
         """
         strling pull_region -f {input.ref_fasta} -o {output.strling_cram} {input.cram} {params.region_mapping} &> {log}
         samtools fasta -f 4 {output.strling_cram} > {output.string_fa} 2>> {log}
         samtools fasta -F 4 {output.strling_cram} >> {output.string_fa} 2>> {log}
+        """
+
+rule jellyfish_kmer:
+    output:
+        kmer_count="results/jellyfish/{sample}/{sample}.polyT_kmer.txt"
+    input:
+        string_fa="results/jellyfish/{sample}/jf/{sample}.strling.fa"
+    log:
+        "results/logs/jellyfish_kmer_{sample}.log"
+    params:
+        region_mapping=region_mapping[genome_build]
+    threads: 8
+    conda:
+        "envs/jellyfish.yaml"
+    shell:
+        """
         cat /dev/null > {output.kmer_count}
         for i in $(seq 3 50); do
-            jellyfish count -m $i -s 10M -t {threads} -C -o results/jellyfish/{wildcards.sample}/jf/${{i}}mer.jf {output.string_fa} &>> {log}
+            jellyfish count -m $i -s 10M -t {threads} -C -o results/jellyfish/{wildcards.sample}/jf/${{i}}mer.jf {input.string_fa} &>> {log}
             repeat_T=$(printf '%*s' "$i" | tr ' ' 'T')
             jellyfish query results/jellyfish/{wildcards.sample}/jf/${{i}}mer.jf "$repeat_T" | awk -v i=$i '{{print i"\t"$2}}' >> {output.kmer_count} 2>> {log}
         done
@@ -179,6 +201,8 @@ rule generate_features:
         script_lib=SNAKEDIR + "scripts/feature_parsing_functions.R",
         MLP_model1=SNAKEDIR + "resources/hap_classifier.RData",
         MLP_model2=SNAKEDIR + "resources/hap_classifier_3.RData"
+    conda:
+        "envs/R.yaml"
     shell:
         """
         mkdir -p results/features
@@ -203,6 +227,8 @@ rule predict_tomm40:
         model=SNAKEDIR + "resources/model_fit.RData"
     log:
         "results/logs/predict_tomm40_{sample}.log"
+    conda:
+        "envs/R.yaml"
     shell:
         """
         mkdir -p results/predictions
