@@ -11,6 +11,7 @@ suppressPackageStartupMessages({
   library(readr)
   library(stringr)
   library(tibble)
+  library(tidymodels)
 })
 
 option_list = list(
@@ -28,14 +29,14 @@ opt = if(!interactive()){
   parse_args(OptionParser(option_list=option_list))
 }else{
   parse_args(OptionParser(option_list=option_list), args = c(
-    "--script_lib", "scripts/feature_parsing_functions.R",
-    "--run_id", "R1708627_00246264",
-    "--expansionhunter", "results/ExpansionHunter/R1708627_00246264/R1708627_00246264.expansionHunter.vcf",
-    "--gangstr", "results/GangSTR/R1708627_00246264/R1708627_00246264.GangSTR.vcf",
-    "--jellyfish", "results/jellyfish/R1708627_00246264/R1708627_00246264.polyT_kmer.txt",
-    "--MLP_model1", "resources/hap_classifier.RData",
-    "--MLP_model2", "resources/hap_classifier_3.RData",
-    "--output", "results/features/R1708627_00246264_features.txt"
+    "--script_lib", "/home/ricardo_a_vialle/TOMM40_WGS/scripts/feature_parsing_functions.R",
+    "--run_id", "HG00171",
+    "--expansionhunter", "results/ExpansionHunter/HG00171/HG00171.expansionHunter.vcf",
+    "--gangstr", "results/GangSTR/HG00171/HG00171.GangSTR.vcf",
+    "--jellyfish", "results/jellyfish/HG00171/HG00171.polyT_kmer.txt",
+    "--MLP_model1", "/home/ricardo_a_vialle/TOMM40_WGS/resources/hap_classifier.RData",
+    "--MLP_model2", "/home/ricardo_a_vialle/TOMM40_WGS/resources/hap_classifier_3.RData",
+    "--output", "results/features/HG00171_features.txt"
   ))
 }
 source(opt$script_lib)
@@ -91,7 +92,8 @@ if (!file.exists(opt$MLP_model1)) {
 }
 load(opt$MLP_model1)
 dat_hap_predicted = bind_cols(
-  predict(reg_fit, kmer_features %>% select(contains("kmer"))),
+  .pred_class = predict(reg_fit$fit, newdata = kmer_features %>% select(contains("kmer")), type = "class"),
+  # predict(reg_fit, kmer_features %>% select(contains("kmer"))),
   predict(reg_fit, kmer_features %>% select(contains("kmer")), type = "prob")) 
 
 # Load the three pre-trained MLP models (predicts haplotypes S,L,VL using k-mer counts)

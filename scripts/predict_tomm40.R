@@ -8,6 +8,7 @@ suppressPackageStartupMessages({
   library(mlr)
   library(dplyr)
   library(tidyr)
+  library(xgboost)
 })
 
 # Define command line options
@@ -22,12 +23,11 @@ option_list <- list(
 opt <- if(!interactive()){
     parse_args(OptionParser(option_list = option_list))
   }else{
-    setwd("/pastel/Github_scripts/TOMM40/TOMM40_WGS_testing")
     parse_args(OptionParser(option_list = option_list), args = c(
-    "--features", "results/features/R1708627_00246264_features.txt",
-    "--output", "results/predictions/R1708627_00246264.tomm40_prediction.txt",
-    "--sample_id", "R1708627_00246264",
-    "--model", "resources/model_fit.RData"
+    "--features", "results/features/HG00157_features.txt",
+    "--output", "results/predictions/HG00157.tomm40_prediction.txt",
+    "--sample_id", "HG00157",
+    "--model", "/home/ricardo_a_vialle/TOMM40_WGS/resources/model_fit.RData"
   ))
 }
 
