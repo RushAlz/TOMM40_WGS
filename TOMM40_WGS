@@ -69,8 +69,8 @@ else
   # This works for standalone execution and conda installation. Conda changes this to the relative path
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
   # Check if the fallback directory looks like a valid installation/source directory
-  if [[ -f "$SCRIPT_DIR_FALLBACK/Snakefile" ]]; then
-    DATA_DIR="$SCRIPT_DIR_FALLBACK"
+  if [[ -f "$SCRIPT_DIR/Snakefile" ]]; then
+    DATA_DIR="$SCRIPT_DIR"
   else
     # 3. Final fallback: Assume current directory (less reliable)
     DATA_DIR="."
