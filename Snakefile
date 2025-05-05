@@ -81,7 +81,7 @@ rule hipstr:
     input:
         cram=OUTPUTDIR + "/{sample}/{sample}." + genome_build + ".TOMM40.cram",
         fasta=config["ref_fasta"],
-        bed=SNAKEDIR + "resources/HipSTR.tomm40.GRCh38.bed",
+        bed=SNAKEDIR + "resources/HipSTR.tomm40." + genome_build + ".bed",
         hipstr_exec=SNAKEDIR + "resources/tools/HipSTR"
     log:
         LOGDIR + "/hipstr_{sample}.log"
@@ -150,7 +150,7 @@ rule expansion_hunter:
     input:
         cram=OUTPUTDIR + "/{sample}/{sample}." + genome_build + ".TOMM40.cram",
         ref_fasta=config["ref_fasta"],
-        expansion_hunter_locus=SNAKEDIR + "resources/expansionHunter.tomm40.GRCh38.json"
+        expansion_hunter_locus=SNAKEDIR + "resources/expansionHunter.tomm40." + genome_build + ".json"
     log:
         LOGDIR + "/expansion_hunter_{sample}.log"
     conda:
@@ -171,7 +171,7 @@ rule gangstr:
     input:
         cram=OUTPUTDIR + "/{sample}/{sample}." + genome_build + ".TOMM40.cram",
         ref_fasta=config["ref_fasta"],
-        regions=SNAKEDIR + "resources/GangSTR.tomm40.GRCh38.bed"
+        regions=SNAKEDIR + "resources/GangSTR.tomm40." + genome_build + ".bed"
     log:
         LOGDIR + "/gangstr_{sample}.log"
     conda:
