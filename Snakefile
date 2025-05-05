@@ -162,7 +162,7 @@ rule expansion_hunter:
             --reference {input.ref_fasta} \
             --variant-catalog {input.expansion_hunter_locus} \
             --output-prefix {OUTPUTDIR}/ExpansionHunter/{wildcards.sample}/{wildcards.sample}.expansionHunter \
-            --analysis-mode streaming &> {log}
+            --analysis-mode streaming --min-locus-coverage 5 &> {log}
         """
 
 rule gangstr:
