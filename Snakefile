@@ -152,7 +152,7 @@ rule expansion_hunter:
         ref_fasta=config["ref_fasta"],
         expansion_hunter_locus=SNAKEDIR + "resources/expansionHunter.tomm40.GRCh38.json"
     log:
-        LODGIR + "/expansion_hunter_{sample}.log"
+        LOGDIR + "/expansion_hunter_{sample}.log"
     conda:
         SNAKEDIR + "/envs/expansionhunter.yaml"
     shell:
