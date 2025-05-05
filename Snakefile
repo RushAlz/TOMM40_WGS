@@ -8,6 +8,7 @@ SNAKEDIR = os.path.dirname(workflow.snakefile) + "/"
 if not config.get("output_dir"):
     config["output_dir"] = os.getcwd() + "/results"
 
+OUTPUTDIR = config["output_dir"]
 
 LOGDIR = config["output_dir"] + "/logs"
 os.makedirs(LOGDIR, exist_ok=True)
@@ -42,31 +43,31 @@ def cram_lookup(wildcards):
 
 rule all:
     input:
-        expand("results/{sample}/{sample}.{genome_build}.TOMM40.cram.crai", sample=sample_ids, genome_build=[genome_build]),
-        expand("results/HipSTR/{sample}.TOMM40polyT.maxflankindel09.vcf.gz", sample=sample_ids),
-        expand("results/jellyfish/{sample}/{sample}.polyT_kmer.txt", sample=sample_ids),
-        expand("results/ExpansionHunter/{sample}/{sample}.expansionHunter.vcf", sample=sample_ids),
-        expand("results/GangSTR/{sample}/{sample}.GangSTR.vcf", sample=sample_ids),
-        expand("results/features/{sample}_features.txt", sample=sample_ids),
-        expand("results/predictions/{sample}.tomm40_prediction.txt", sample=sample_ids),
-        "results/predictions/tomm40_predictions_summary.tsv"
+        expand(OUTPUTDIR + "/{sample}/{sample}.{genome_build}.TOMM40.cram.crai", sample=sample_ids, genome_build=[genome_build]),
+        expand(OUTPUTDIR + "/HipSTR/{sample}.TOMM40polyT.maxflankindel09.vcf.gz", sample=sample_ids),
+        expand(OUTPUTDIR + "/jellyfish/{sample}/{sample}.polyT_kmer.txt", sample=sample_ids),
+        expand(OUTPUTDIR + "/ExpansionHunter/{sample}/{sample}.expansionHunter.vcf", sample=sample_ids),
+        expand(OUTPUTDIR + "/GangSTR/{sample}/{sample}.GangSTR.vcf", sample=sample_ids),
+        expand(OUTPUTDIR + "/features/{sample}_features.txt", sample=sample_ids),
+        expand(OUTPUTDIR + "/predictions/{sample}.tomm40_prediction.txt", sample=sample_ids),
+        OUTPUTDIR + "/predictions/tomm40_predictions_summary.tsv"
 
 wildcard_constraints:
     genome_build=".+"
         
 rule subset_cram:
     output:
-        cram=temp("results/{sample}/{sample}." + genome_build + ".TOMM40.cram"),
-        index=temp("results/{sample}/{sample}." + genome_build + ".TOMM40.cram.crai")
+        cram=temp(OUTPUTDIR + "/{sample}/{sample}." + genome_build + ".TOMM40.cram"),
+        index=temp(OUTPUTDIR + "/{sample}/{sample}." + genome_build + ".TOMM40.cram.crai")
     input:
         cram=cram_lookup,
         ref_fasta=config["ref_fasta"]
     log:
-        "results/logs/subset_cram_{sample}.log"
+        LOGDIR + "/subset_cram_{sample}.log"
     params:
         region=region_mapping[genome_build]
     conda:
-        "envs/samtools.yaml"
+        SNAKEDIR + "/envs/samtools.yaml"
     shell:
         """
         mkdir -p results/{wildcards.sample}
@@ -76,18 +77,18 @@ rule subset_cram:
 
 rule hipstr:
     output:
-        vcf="results/HipSTR/{sample}.TOMM40polyT.maxflankindel09.vcf.gz"
+        vcf=OUTPUTDIR + "/HipSTR/{sample}.TOMM40polyT.maxflankindel09.vcf.gz"
     input:
-        cram="results/{sample}/{sample}." + genome_build + ".TOMM40.cram",
+        cram=OUTPUTDIR + "/{sample}/{sample}." + genome_build + ".TOMM40.cram",
         fasta=config["ref_fasta"],
         bed=SNAKEDIR + "resources/HipSTR.tomm40.GRCh38.bed",
         hipstr_exec=SNAKEDIR + "resources/tools/HipSTR"
     log:
-        "results/logs/hipstr_{sample}.log"
+        LOGDIR + "/hipstr_{sample}.log"
     params:
         min_reads=15
     conda:
-        "envs/samtools.yaml"
+        SNAKEDIR + "/envs/samtools.yaml"
     shell:
         """
         mkdir -p results/HipSTR
@@ -103,17 +104,17 @@ rule hipstr:
         
 rule strling:
     output:
-        strling_cram="results/jellyfish/{sample}/jf/{sample}.strling.cram",
-        string_fa="results/jellyfish/{sample}/jf/{sample}.strling.fa"
+        strling_cram=OUTPUTDIR + "/jellyfish/{sample}/jf/{sample}.strling.cram",
+        string_fa=OUTPUTDIR + "/jellyfish/{sample}/jf/{sample}.strling.fa"
     input:
-        cram="results/{sample}/{sample}." + genome_build + ".TOMM40.cram",
+        cram=OUTPUTDIR + "/{sample}/{sample}." + genome_build + ".TOMM40.cram",
         ref_fasta=config["ref_fasta"]
     log:
-        "results/logs/strling_{sample}.log"
+        LOGDIR + "/strling_{sample}.log"
     params:
         region_mapping=region_mapping[genome_build]
     conda:
-        "envs/strling.yaml"
+        SNAKEDIR + "/envs/strling.yaml"
     shell:
         """
         strling pull_region -f {input.ref_fasta} -o {output.strling_cram} {input.cram} {params.region_mapping} &> {log}
@@ -123,89 +124,89 @@ rule strling:
 
 rule jellyfish_kmer:
     output:
-        kmer_count="results/jellyfish/{sample}/{sample}.polyT_kmer.txt"
+        kmer_count=OUTPUTDIR + "/jellyfish/{sample}/{sample}.polyT_kmer.txt"
     input:
-        string_fa="results/jellyfish/{sample}/jf/{sample}.strling.fa"
+        string_fa=OUTPUTDIR + "/jellyfish/{sample}/jf/{sample}.strling.fa"
     log:
-        "results/logs/jellyfish_kmer_{sample}.log"
+        LOGDIR + "/jellyfish_kmer_{sample}.log"
     params:
         region_mapping=region_mapping[genome_build]
     threads: 8
     conda:
-        "envs/jellyfish.yaml"
+        SNAKEDIR + "/envs/jellyfish.yaml"
     shell:
         """
         cat /dev/null > {output.kmer_count}
         for i in $(seq 3 50); do
-            jellyfish count -m $i -s 10M -t {threads} -C -o results/jellyfish/{wildcards.sample}/jf/${{i}}mer.jf {input.string_fa} &>> {log}
+            jellyfish count -m $i -s 10M -t {threads} -C -o {OUTPUTDIR}/jellyfish/{wildcards.sample}/jf/${{i}}mer.jf {input.string_fa} &>> {log}
             repeat_T=$(printf '%*s' "$i" | tr ' ' 'T')
-            jellyfish query results/jellyfish/{wildcards.sample}/jf/${{i}}mer.jf "$repeat_T" | awk -v i=$i '{{print i"\t"$2}}' >> {output.kmer_count} 2>> {log}
+            jellyfish query {OUTPUTDIR}/jellyfish/{wildcards.sample}/jf/${{i}}mer.jf "$repeat_T" | awk -v i=$i '{{print i"\t"$2}}' >> {output.kmer_count} 2>> {log}
         done
         """
 
 rule expansion_hunter:
     output:
-        "results/ExpansionHunter/{sample}/{sample}.expansionHunter.vcf"
+        OUTPUTDIR + "/ExpansionHunter/{sample}/{sample}.expansionHunter.vcf"
     input:
-        cram="results/{sample}/{sample}." + genome_build + ".TOMM40.cram",
+        cram=OUTPUTDIR + "/{sample}/{sample}." + genome_build + ".TOMM40.cram",
         ref_fasta=config["ref_fasta"],
         expansion_hunter_locus=SNAKEDIR + "resources/expansionHunter.tomm40.GRCh38.json"
     log:
-        "results/logs/expansion_hunter_{sample}.log"
+        LODGIR + "/expansion_hunter_{sample}.log"
     conda:
-        "envs/expansionhunter.yaml"
+        SNAKEDIR + "/envs/expansionhunter.yaml"
     shell:
         """
-        mkdir -p results/ExpansionHunter/{wildcards.sample}
+        mkdir -p {OUTPUTDIR}/ExpansionHunter/{wildcards.sample}
         ExpansionHunter --reads {input.cram} \
             --reference {input.ref_fasta} \
             --variant-catalog {input.expansion_hunter_locus} \
-            --output-prefix results/ExpansionHunter/{wildcards.sample}/{wildcards.sample}.expansionHunter \
+            --output-prefix {OUTPUTDIR}/ExpansionHunter/{wildcards.sample}/{wildcards.sample}.expansionHunter \
             --analysis-mode streaming &> {log}
         """
 
 rule gangstr:
     output:
-        "results/GangSTR/{sample}/{sample}.GangSTR.vcf"
+        OUTPUTDIR + "/GangSTR/{sample}/{sample}.GangSTR.vcf"
     input:
-        cram="results/{sample}/{sample}." + genome_build + ".TOMM40.cram",
+        cram=OUTPUTDIR + "/{sample}/{sample}." + genome_build + ".TOMM40.cram",
         ref_fasta=config["ref_fasta"],
         regions=SNAKEDIR + "resources/GangSTR.tomm40.GRCh38.bed"
     log:
-        "results/logs/gangstr_{sample}.log"
+        LOGDIR + "/gangstr_{sample}.log"
     conda:
-        "envs/gangstr.yaml"
+        SNAKEDIR + "/envs/gangstr.yaml"
     shell:
         """
-        mkdir -p results/GangSTR/{wildcards.sample}
+        mkdir -p {OUTPUTDIR}/GangSTR/{wildcards.sample}
         GangSTR --bam {input.cram} \
             --ref {input.ref_fasta} \
             --targeted \
             --regions {input.regions} \
             --output-readinfo \
             --include-ggl \
-            --out results/GangSTR/{wildcards.sample}/{wildcards.sample}.GangSTR &> {log}
+            --out {OUTPUTDIR}/GangSTR/{wildcards.sample}/{wildcards.sample}.GangSTR &> {log}
         """
 
 rule generate_features:
     input:
-        expansionhunter="results/ExpansionHunter/{sample}/{sample}.expansionHunter.vcf",
-        gangstr="results/GangSTR/{sample}/{sample}.GangSTR.vcf",
-        jellyfish="results/jellyfish/{sample}/{sample}.polyT_kmer.txt"
+        expansionhunter=OUTPUTDIR + "/ExpansionHunter/{sample}/{sample}.expansionHunter.vcf",
+        gangstr=OUTPUTDIR + "/GangSTR/{sample}/{sample}.GangSTR.vcf",
+        jellyfish=OUTPUTDIR + "/jellyfish/{sample}/{sample}.polyT_kmer.txt"
     output:
-        "results/features/{sample}_features.txt"
+        OUTPUTDIR + "/features/{sample}_features.txt"
     log:
-        "results/logs/generate_features_{sample}.log"
+        LOGDIR + "/generate_features_{sample}.log"
     params:
         script=SNAKEDIR + "scripts/process_features.R",
         script_lib=SNAKEDIR + "scripts/feature_parsing_functions.R",
         MLP_model1=SNAKEDIR + "resources/hap_classifier.RData",
         MLP_model2=SNAKEDIR + "resources/hap_classifier_3.RData"
     conda:
-        "envs/R.yaml"
+        SNAKEDIR + "/envs/R.yaml"
     shell:
         """
-        mkdir -p results/features
+        mkdir -p {OUTPUTDIR}/features
         Rscript {params.script} \
             --script_lib {params.script_lib} \
             --run_id {wildcards.sample} \
@@ -219,19 +220,19 @@ rule generate_features:
 
 rule predict_tomm40:
     input:
-        features="results/features/{sample}_features.txt"
+        features=OUTPUTDIR + "/features/{sample}_features.txt"
     output:
-        prediction="results/predictions/{sample}.tomm40_prediction.txt"
+        prediction=OUTPUTDIR + "/predictions/{sample}.tomm40_prediction.txt"
     params:
         script=SNAKEDIR + "scripts/predict_tomm40.R",
         model=SNAKEDIR + "resources/model_fit.RData"
     log:
-        "results/logs/predict_tomm40_{sample}.log"
+        LOGDIR + "/predict_tomm40_{sample}.log"
     conda:
-        "envs/R.yaml"
+        SNAKEDIR + "/envs/R.yaml"
     shell:
         """
-        mkdir -p results/predictions
+        mkdir -p {OUTPUTDIR}/predictions
         Rscript {params.script} --features {input.features} \
             --model {params.model} \
             --sample_id {wildcards.sample} \
@@ -240,11 +241,11 @@ rule predict_tomm40:
 
 rule summarize_predictions:
     input:
-        predictions=expand("results/predictions/{sample}.tomm40_prediction.txt", sample=sample_ids)
+        predictions=expand(OUTPUTDIR + "/predictions/{sample}.tomm40_prediction.txt", sample=sample_ids)
     output:
-        summary="results/predictions/tomm40_predictions_summary.tsv"
+        summary=OUTPUTDIR + "/predictions/tomm40_predictions_summary.tsv"
     log:
-        f"{LOGDIR}/summarize_predictions.log"
+        LOGDIR + "/summarize_predictions.log"
     run:
         import pandas as pd
         import sys
