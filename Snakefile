@@ -33,9 +33,9 @@ genome_build = config["genome_build"]
 
 region_mapping = {
     "GRCh38": "chr19:44399792-45399826",
-    "GRCh37": "chr19:44399780-45399837",
-    "hg19": "chr19:44399780-45399837",
-    "b37": "19:44399780-45399837"
+    "GRCh37": "chr19:44903049-45903083",
+    "hg19": "chr19:44903049-45903083",
+    "b37": "19:44903049-45903083"
 }
 
 def cram_lookup(wildcards):
@@ -171,7 +171,7 @@ rule gangstr:
     input:
         cram=OUTPUTDIR + "/{sample}/{sample}." + genome_build + ".TOMM40.cram",
         ref_fasta=config["ref_fasta"],
-        regions=SNAKEDIR + "resources/GangSTR.tomm40." + genome_build + ".bed"
+        regions=SNAKEDIR + "resources/GangSTR.tomm40." + genome_build + "cd ../T.bed"
     log:
         LOGDIR + "/gangstr_{sample}.log"
     conda:
