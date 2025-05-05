@@ -8,22 +8,21 @@ display_help() {
   # Dynamically determine the script name for usage message
   local script_name
   script_name=$(basename "$0")
-  echo "Usage: $script_name [--input_wgs BAM/CRAM] [--input_table TSV] [--configfile YAML FILE] [other Snakemake options]"
+  echo "Usage: $script_name [OPTIONS]"
   echo ""
   echo "Parameters:"
-  echo "   --input_wgs               Input BAM/CRAM file(s). Can be a single file, glob pattern (\"*.cram\"), or space-separated list."
+  echo "   --input_wgs               Input BAM/CRAM file(s). Can be a single file, glob pattern (\"*.cram\"; quotes are mandatory)."
   echo "   --input_table             TSV file with columns 'sample_id' and 'path' listing input files."
-  echo "   --configfile              YAML configuration file (default: config.yaml in script/data directory)."
-  echo "   --ref_fasta               Reference genome FASTA file (default: resources/GRCh38.fa in script/data directory)."
-  echo "   --genome_build            Genome build (default: GRCh38)."
-  echo "   --output_dir              Output directory (default: results)."
+  echo "   --configfile              YAML configuration file (default: config.yaml in script directory)."
+  echo "   --ref_fasta               Reference genome FASTA file."
+  echo "   --genome_build            Genome build."
+  echo "   --output_dir              Output directory."
   echo "   --cores                   Number of cores to use (default: 1)."
   echo ""
   echo "Useful Snakemake parameters:"
   echo "   --conda-create-envs-only  Only creates the job-specific conda environments then exits"
   echo "   -k, --keep-going          Continue with independent jobs if a job fails"
   echo "   -n, --dryrun              Do not execute anything"
-  echo "   -p, --printshellcmds      Print out the shell commands that will be executed"
   echo ""
   echo "Examples:"
   echo "   # Run with a single input file"
@@ -34,6 +33,9 @@ display_help() {
   echo ""
   echo "   # Run with a sample table"
   echo "   $script_name --input_table samples.tsv"
+  echo ""
+  echo "   # Run with just a config file (parameters will be read from config)"
+  echo "   $script_name --configfile my_config.yaml"
   echo ""
   echo "More info at https://github.com/RushAlz/TOMM40_WGS"
   echo ""
@@ -64,8 +66,8 @@ if [[ -n "$TOMM40_DATA_DIR" && -d "$TOMM40_DATA_DIR" ]]; then
   DATA_DIR="$TOMM40_DATA_DIR"
 else
   # 2. Fallback: Determine directory containing this script
-  # This works for standalone execution and conda installation.
-  SCRIPT_DIR_FALLBACK="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
+  # This works for standalone execution and conda installation. Conda changes this to the relative path
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
   # Check if the fallback directory looks like a valid installation/source directory
   if [[ -f "$SCRIPT_DIR_FALLBACK/Snakefile" ]]; then
     DATA_DIR="$SCRIPT_DIR_FALLBACK"
@@ -79,62 +81,80 @@ fi
 
 # --- Default Paths based on DATA_DIR --- #
 CONFIGFILE_DEFAULT="$DATA_DIR/config.yaml"
-REF_FASTA_DEFAULT="$DATA_DIR/resources/GRCh38.fa"
-SNAKEFILE_DEFAULT="$DATA_DIR/Snakefile"
+SNAKEFILE="$DATA_DIR/Snakefile"
 
-# --- Initialize Variables with Defaults or Command-Line Overrides --- #
+# --- Initialize Variables --- #
 INPUT_WGS=""
 INPUT_TABLE=""
-CONFIGFILE="$CONFIGFILE_DEFAULT" # Will be potentially overridden by --configfile arg
-REF_FASTA="$REF_FASTA_DEFAULT"   # Will be potentially overridden by --ref_fasta arg
-GENOME_BUILD="GRCh38"
-OUTPUT_DIR="results"
+CONFIGFILE="$CONFIGFILE_DEFAULT" # Only default we keep
 CORES="1"
-SNAKEFILE="$SNAKEFILE_DEFAULT" # Use the determined default path
 EXTRA_PARAMS=""
 
+# Track which parameters were explicitly set by the user
+declare -A EXPLICIT_PARAMS
+EXPLICIT_PARAMS["ref_fasta"]=0
+EXPLICIT_PARAMS["genome_build"]=0
+EXPLICIT_PARAMS["output_dir"]=0
+
 # --- Parse Command Line Arguments --- #
-# (Keep the argument parsing loop as it was, it correctly overrides the variables)
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --input_wgs)
       if [[ -z "$2" || "$2" == --* ]]; then error_exit "Missing value for parameter: $1"; fi
-      INPUT_WGS="$2"; shift 2 ;;
+      INPUT_WGS="$2"
+      EXPLICIT_PARAMS["input_wgs"]=1
+      shift 2 ;;
     --input_table)
       if [[ -z "$2" || "$2" == --* ]]; then error_exit "Missing value for parameter: $1"; fi
-      INPUT_TABLE="$2"; shift 2 ;;
+      INPUT_TABLE="$2"
+      EXPLICIT_PARAMS["input_table"]=1
+      shift 2 ;;
     --configfile)
       if [[ -z "$2" || "$2" == --* ]]; then error_exit "Missing value for parameter: $1"; fi
-      CONFIGFILE="$2"; shift 2 ;;
+      CONFIGFILE="$2"
+      shift 2 ;;
     --ref_fasta)
       if [[ -z "$2" || "$2" == --* ]]; then error_exit "Missing value for parameter: $1"; fi
-      REF_FASTA="$2"; shift 2 ;;
+      REF_FASTA="$2"
+      EXPLICIT_PARAMS["ref_fasta"]=1
+      shift 2 ;;
     --genome_build)
       if [[ -z "$2" || "$2" == --* ]]; then error_exit "Missing value for parameter: $1"; fi
-      GENOME_BUILD="$2"; shift 2 ;;
+      GENOME_BUILD="$2"
+      EXPLICIT_PARAMS["genome_build"]=1
+      shift 2 ;;
     --output_dir)
       if [[ -z "$2" || "$2" == --* ]]; then error_exit "Missing value for parameter: $1"; fi
-      OUTPUT_DIR="$2"; shift 2 ;;
+      OUTPUT_DIR="$2"
+      EXPLICIT_PARAMS["output_dir"]=1
+      shift 2 ;;
     --cores)
       if [[ -z "$2" || "$2" == --* ]]; then error_exit "Missing value for parameter: $1"; fi
       if ! [[ "$2" =~ ^[0-9]+$ ]]; then error_exit "Cores must be a positive integer: $2"; fi
-      CORES="$2"; shift 2 ;;
+      CORES="$2"
+      shift 2 ;;
     --help|-h)
       display_help ;;
     *)
-      EXTRA_PARAMS="$EXTRA_PARAMS $1"; shift ;;
+      EXTRA_PARAMS="$EXTRA_PARAMS $1"
+      shift ;;
   esac
 done
 
 # --- Validate Inputs --- #
-# Check if Snakefile exists using the final SNAKEFILE path
+# Check if Snakefile exists
 if [[ ! -f "$SNAKEFILE" ]]; then
   error_exit "Snakefile not found. Determined path: $SNAKEFILE"
 fi
 
-# Check if essential inputs are missing (only if default config doesn't exist)
-if [[ -z "$INPUT_WGS" && -z "$INPUT_TABLE" && ! -f "$CONFIGFILE" ]]; then
-  error_exit "Input required: Use --input_wgs, --input_table, or ensure config file exists at $CONFIGFILE"
+# Check if config file exists
+if [[ ! -f "$CONFIGFILE" ]]; then
+  warning "Config file not found at '$CONFIGFILE'. Make sure parameters are specified in command line."
+fi
+
+# Check if we have either a config file, input_wgs, or input_table
+if [[ ! -f "$CONFIGFILE" && -z "$INPUT_WGS" && -z "$INPUT_TABLE" ]]; then
+  error_exit "Input required: Use --input_wgs, --input_table, or ensure a config file exists"
 fi
 
 # Check if both input methods are specified
@@ -157,42 +177,37 @@ fi
 # --- Build Snakemake Command --- #
 SNAKEMAKE_CMD="snakemake -s \"$SNAKEFILE\""
 
-# Add configfile if it exists (using the final CONFIGFILE variable)
+# Add configfile if it exists
 if [[ -f "$CONFIGFILE" ]]; then
   SNAKEMAKE_CMD="$SNAKEMAKE_CMD --configfile \"$CONFIGFILE\""
-elif [[ "$CONFIGFILE" != "$CONFIGFILE_DEFAULT" ]]; then
-  # Warn if a specific config file was requested but not found
-  warning "Specified config file not found at '$CONFIGFILE'."
-elif [[ ! -f "$CONFIGFILE_DEFAULT" ]]; then
-  # Warn if the default config file wasn't found either
-  warning "Default config file not found at '$CONFIGFILE_DEFAULT'. Using command line parameters only."
+  echo "Using config file: $CONFIGFILE"
 fi
 
 # Add config parameters passed via command line
 CONFIG_PARAMS=""
 
-# Handle input_table (takes precedence over input_wgs)
-if [[ -n "$INPUT_TABLE" ]]; then
+# Only add parameters explicitly set by the user
+if [[ ${EXPLICIT_PARAMS["input_table"]} -eq 1 ]]; then
   CONFIG_PARAMS="$CONFIG_PARAMS input_table=\"$INPUT_TABLE\""
-# Handle input_wgs (properly escape glob patterns)
-elif [[ -n "$INPUT_WGS" ]]; then
+elif [[ ${EXPLICIT_PARAMS["input_wgs"]} -eq 1 ]]; then
   if [[ "$INPUT_WGS" == *\** || "$INPUT_WGS" == *\?* ]]; then
     CONFIG_PARAMS="$CONFIG_PARAMS input_glob=\"$INPUT_WGS\""
   else
-    # Pass as-is, let Snakemake handle existence check if needed
     CONFIG_PARAMS="$CONFIG_PARAMS input_glob=\"$INPUT_WGS\""
   fi
 fi
 
-# Add other config overrides from command line
-if [[ "$REF_FASTA" != "$REF_FASTA_DEFAULT" || -n "$REF_FASTA" ]]; then
+# Add other explicitly set parameters
+if [[ ${EXPLICIT_PARAMS["ref_fasta"]} -eq 1 ]]; then
   CONFIG_PARAMS="$CONFIG_PARAMS ref_fasta=\"$REF_FASTA\""
 fi
-if [[ -n "$GENOME_BUILD" ]]; then
+if [[ ${EXPLICIT_PARAMS["genome_build"]} -eq 1 ]]; then
   CONFIG_PARAMS="$CONFIG_PARAMS genome_build=\"$GENOME_BUILD\""
 fi
-if [[ -n "$OUTPUT_DIR" ]]; then
+if [[ ${EXPLICIT_PARAMS["output_dir"]} -eq 1 ]]; then
   CONFIG_PARAMS="$CONFIG_PARAMS output_dir=\"$OUTPUT_DIR\""
+  # Create output directory if explicitly specified
+  mkdir -p "$OUTPUT_DIR" || error_exit "Failed to create output directory: $OUTPUT_DIR"
 fi
 
 # Add config parameters if any exist
@@ -212,9 +227,6 @@ fi
 echo "Determined DATA_DIR: $DATA_DIR"
 echo "Executing: $SNAKEMAKE_CMD"
 
-# Create output directory if it doesn't exist
-mkdir -p "$OUTPUT_DIR" || error_exit "Failed to create output directory: $OUTPUT_DIR"
-
 # Execute snakemake command
 eval "$SNAKEMAKE_CMD"
 EXIT_CODE=$?
@@ -225,5 +237,3 @@ if [[ $EXIT_CODE -ne 0 ]]; then
 fi
 
 echo "TOMM40_WGS pipeline completed successfully."
-
-
