@@ -171,7 +171,7 @@ rule gangstr:
     input:
         cram=OUTPUTDIR + "/{sample}/{sample}." + genome_build + ".TOMM40.cram",
         ref_fasta=config["ref_fasta"],
-        regions=SNAKEDIR + "resources/GangSTR.tomm40." + genome_build + "cd ../T.bed"
+        regions=SNAKEDIR + "resources/GangSTR.tomm40." + genome_build + ".bed"
     log:
         LOGDIR + "/gangstr_{sample}.log"
     conda:
