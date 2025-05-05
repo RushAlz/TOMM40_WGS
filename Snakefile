@@ -67,7 +67,7 @@ rule subset_cram:
     params:
         region=region_mapping[genome_build]
     conda:
-        SNAKEDIR + "/envs/samtools.yaml"
+        SNAKEDIR + "envs/samtools.yaml"
     shell:
         """
         mkdir -p results/{wildcards.sample}
@@ -88,7 +88,7 @@ rule hipstr:
     params:
         min_reads=15
     conda:
-        SNAKEDIR + "/envs/samtools.yaml"
+        SNAKEDIR + "envs/samtools.yaml"
     shell:
         """
         mkdir -p results/HipSTR
@@ -114,7 +114,7 @@ rule strling:
     params:
         region_mapping=region_mapping[genome_build]
     conda:
-        SNAKEDIR + "/envs/strling.yaml"
+        SNAKEDIR + "envs/strling.yaml"
     shell:
         """
         strling pull_region -f {input.ref_fasta} -o {output.strling_cram} {input.cram} {params.region_mapping} &> {log}
@@ -133,7 +133,7 @@ rule jellyfish_kmer:
         region_mapping=region_mapping[genome_build]
     threads: 8
     conda:
-        SNAKEDIR + "/envs/jellyfish.yaml"
+        SNAKEDIR + "envs/jellyfish.yaml"
     shell:
         """
         cat /dev/null > {output.kmer_count}
@@ -154,7 +154,7 @@ rule expansion_hunter:
     log:
         LOGDIR + "/expansion_hunter_{sample}.log"
     conda:
-        SNAKEDIR + "/envs/expansionhunter.yaml"
+        SNAKEDIR + "envs/expansionhunter.yaml"
     shell:
         """
         mkdir -p {OUTPUTDIR}/ExpansionHunter/{wildcards.sample}
@@ -175,7 +175,7 @@ rule gangstr:
     log:
         LOGDIR + "/gangstr_{sample}.log"
     conda:
-        SNAKEDIR + "/envs/gangstr.yaml"
+        SNAKEDIR + "envs/gangstr.yaml"
     shell:
         """
         mkdir -p {OUTPUTDIR}/GangSTR/{wildcards.sample}
@@ -203,7 +203,7 @@ rule generate_features:
         MLP_model1=SNAKEDIR + "resources/hap_classifier.RData",
         MLP_model2=SNAKEDIR + "resources/hap_classifier_3.RData"
     conda:
-        SNAKEDIR + "/envs/R.yaml"
+        SNAKEDIR + "envs/R.yaml"
     shell:
         """
         mkdir -p {OUTPUTDIR}/features
@@ -229,7 +229,7 @@ rule predict_tomm40:
     log:
         LOGDIR + "/predict_tomm40_{sample}.log"
     conda:
-        SNAKEDIR + "/envs/R.yaml"
+        SNAKEDIR + "envs/R.yaml"
     shell:
         """
         mkdir -p {OUTPUTDIR}/predictions
