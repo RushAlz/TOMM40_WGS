@@ -2,6 +2,9 @@
 
 `TOMM40_WGS` is a Snakemake pipeline that enables automated genotyping of the TOMM40'523 poly-T repeat from WGS data. It integrates STR genotyping tools, k-mer analysis, and machine learning to provide accurate repeat length and genotype predictions.
 
+[![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat-square)](http://bioconda.github.io/recipes/tomm40_wgs/README.html)
+[![TOMM40_WGS-Demo](https://github.com/RushAlz/TOMM40_WGS/actions/workflows/run_pipeline.yml/badge.svg)](https://github.com/RushAlz/TOMM40_WGS/actions/workflows/run_pipeline.yml)
+
 ---
 
 ## Background
