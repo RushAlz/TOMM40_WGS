@@ -26,4 +26,5 @@ jobs:
           conda config --set channel_priority strict
           conda create -y -n TOMM40_WGS_env -c conda-forge -c bioconda snakemake==9.3.0 samtools==1.21 pandas==2.2.3    
           conda init bash; bash;
+          source activate base
           conda activate TOMM40_WGS_env
