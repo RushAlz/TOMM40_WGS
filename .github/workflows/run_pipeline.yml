@@ -10,9 +10,9 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v3
         with:
           auto-activate-base: true
-      - name: Conda info
+      - name: Create TOMM40_WGS_env
         shell: bash -el {0}
-        run: conda info
-      - name: Conda list
-        shell: pwsh
-        run: conda list
+        run: 
+          conda config --set channel_priority strict
+          conda create -y -n TOMM40_WGS_env -c conda-forge -c bioconda snakemake==9.3.0 samtools==1.21 pandas==2.2.3
+          conda activate TOMM40_WGS_env
