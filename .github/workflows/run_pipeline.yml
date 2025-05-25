@@ -4,9 +4,11 @@ on: [push]
 jobs:
   Run-TOMM40_WGS-Demo:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
+    defaults:
+      run:
+        shell: bash -el {0}
     steps:
+      - uses: actions/checkout@v4
       - uses: conda-incubator/setup-miniconda@v3
         with:
           activate-environment: TOMM40_WGS_env
