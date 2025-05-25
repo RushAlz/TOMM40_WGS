@@ -1,0 +1,6 @@
+name: TOMM40_WGS_env
+channels:
+  - conda-forge
+  - bioconda 
+dependencies:
+  - tomm40_wgs
