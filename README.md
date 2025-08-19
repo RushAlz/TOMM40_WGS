@@ -25,7 +25,14 @@ The repeat length is typically categorized into three classes:
 
 - **Conda**: install via [Miniforge](https://conda-forge.org/download/) (recommended) 
 
-### Create a conda environment
+### Install with bioconda 
+```bash
+conda install -c conda-forge -c bioconda tomm40_wgs
+```
+
+Use the `TOMM40_WGS` launcher script to run the pipeline with minimal setup.
+
+### Alternatively: Create a conda environment
 ```bash
 conda config --set channel_priority strict
 conda create -y -n TOMM40_WGS_env -c conda-forge -c bioconda \
@@ -42,13 +49,6 @@ chmod u+x TOMM40_WGS
 # Get help
 ./TOMM40_WGS --help
 ```
-
-### (soon) Alternatively: Install with bioconda 
-```bash
-conda install -c conda-forge -c bioconda tomm40_wgs
-```
-
-Use the `TOMM40_WGS` launcher script to run the pipeline with minimal setup.
 
 ---
 
@@ -267,4 +267,4 @@ Important licensing information is available [here](docs/license_instructions.md
 ## Citation
 If you use TOMM40_WGS, please cite:
 
-> Vialle RA et al. (2025). *Genotyping TOMM40'523 Poly-T Polymorphisms Using Whole-Genome Sequencing*. [medRxiv 2025.04.23.25326276; doi: https://doi.org/10.1101/2025.04.23.25326276](https://doi.org/10.1101/2025.04.23.25326276)
+> Vialle RA et al. (2025). **Genotyping TOMM40'523 poly-T polymorphisms using whole-genome sequencing**. *Human Genetics and Genomics Advances*. [https://doi.org/10.1016/j.xhgg.2025.100488](https://doi.org/10.1016/j.xhgg.2025.100488)
