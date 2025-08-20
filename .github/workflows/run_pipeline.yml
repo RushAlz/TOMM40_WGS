@@ -39,7 +39,7 @@ jobs:
           --output_dir results_GRCh38 \
                 --cores 2
       - name: Upload HipSTR log
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: hipstr_NA12878_log
           path: results_GRCh38/logs/hipstr_NA12878.log
