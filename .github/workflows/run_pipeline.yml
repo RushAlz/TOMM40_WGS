@@ -38,11 +38,6 @@ jobs:
           --ref_fasta GRCh38_full_analysis_set_plus_decoy_hla.fa \
           --output_dir results_GRCh38 \
                 --cores 2
-      - name: Upload HipSTR log
-        uses: actions/upload-artifact@v4
-        with:
-          name: hipstr_NA12878_log
-          path: results_GRCh38/logs/hipstr_NA12878.log
       - name: Check results
         run: |
           cat results_GRCh38/predictions/tomm40_predictions_summary.tsv | column -t
